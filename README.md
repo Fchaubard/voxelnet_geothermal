@@ -16,12 +16,12 @@ This model predicts temporal evolution of geothermal reservoir properties over 3
 
 Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 28-step autoregressive rollout:
 
-| Model | Kernel | Params | Time/file | ACC P | ACC T | MSE P | MSE T |
-|-------|--------|--------|-----------|-------|-------|-------|-------|
-| **best_r2_step24000.pt** | 5x5x5 | 309K | 13s | 80.1% | 86.3% | **12.7** | 45.9 |
-| best_r5_step53000.pt | 11x11x11 | 849K | 15s | **84.1%** | **86.7%** | 20.5 | **35.8** |
-| Copy baseline | - | 0 | 0s | 46.3% | 83.9% | 121.1 | 139.1 |
-| Linear baseline | - | 120 | 0.4s | 40.4% | 62.8% | 114.1 | 166.8 |
+| Model | Kernel | Params | VRAM | Time/file | ACC P | ACC T | MSE P | MSE T |
+|-------|--------|--------|------|-----------|-------|-------|-------|-------|
+| **best_r2_step24000.pt** | 5x5x5 | 309K | 1.1 GB | 13s | 80.1% | 86.3% | **12.7** | 45.9 |
+| best_r5_step53000.pt | 11x11x11 | 849K | 1.1 GB | 15s | **84.1%** | **86.7%** | 20.5 | **35.8** |
+| Copy baseline | - | 0 | 0 | 0s | 46.3% | 83.9% | 121.1 | 139.1 |
+| Linear baseline | - | 120 | 0 | 0.4s | 40.4% | 62.8% | 114.1 | 166.8 |
 
 **Accuracy Thresholds (ACC_ABS):**
 - Pressure: +/- 5 bar
