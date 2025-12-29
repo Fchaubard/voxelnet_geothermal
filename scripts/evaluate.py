@@ -89,7 +89,7 @@ def load_model_from_checkpoint(checkpoint_path, stats, device):
     return model, step
 
 
-def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, max_steps=29, save_path=None):
+def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, max_steps=29, save_path=None, baseline=None):
     """
     Perform full autoregressive rollout evaluation with per-timestep metrics.
 
@@ -107,7 +107,8 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
         per_timestep: dict with lists of per-timestep MSE and Acc5 for P, T, WEPT
         summary: dict with averaged metrics (matches train_ddp.py)
     """
-    model.eval()
+    if model is not None:
+        model.eval()
 
     # Load stats for normalization
     static_mean = torch.tensor(stats["mean"]["static"], device=device).view(-1, 1, 1, 1)
@@ -134,7 +135,7 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
     # For saving predictions (only used if save_path is provided)
     all_predictions = {}
 
-    base_model = model.module if hasattr(model, 'module') else model
+    base_model = model.module if (model is not None and hasattr(model, 'module')) else model
     files_processed = 0
     model_time = 0.0  # Accumulate only forward pass time (not file I/O)
 
@@ -221,9 +222,13 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
 
                 # Forward pass - model outputs NORMALIZED RESIDUALS
                 t0 = time.time()
-                with torch.cuda.amp.autocast(enabled=True):
-                    grid_pred_norm, _ = base_model(x_input, params_t)
-                torch.cuda.synchronize()  # Ensure GPU computation is complete
+                if baseline == "copy":
+                    # Copy baseline: predict delta=0 (propagate current values)
+                    grid_pred_norm = torch.zeros(1, 3, Z, Y, X, device=device)
+                else:
+                    with torch.cuda.amp.autocast(enabled=True):
+                        grid_pred_norm, _ = base_model(x_input, params_t)
+                    torch.cuda.synchronize()  # Ensure GPU computation is complete
                 model_time += time.time() - t0
 
                 # Guard against NaN/inf
@@ -441,10 +446,12 @@ def main():
                         help="Skip 1-step evaluation")
     parser.add_argument("--skip_rollout", action="store_true",
                         help="Skip rollout evaluation")
+    parser.add_argument("--baseline", type=str, choices=["copy", "linear"], default=None,
+                        help="Run baseline instead of model: 'copy' (delta=0) or 'linear' (untrained linear)")
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.checkpoint):
+    if args.baseline is None and not os.path.exists(args.checkpoint):
         raise FileNotFoundError(f"Checkpoint not found: {args.checkpoint}")
     if not os.path.exists(args.stats_path):
         raise FileNotFoundError(f"Stats file not found: {args.stats_path}")
@@ -456,7 +463,22 @@ def main():
     with open(args.stats_path, "r") as f:
         stats = json.load(f)
 
-    model, step = load_model_from_checkpoint(args.checkpoint, stats, device)
+    # Handle baseline modes
+    if args.baseline == "copy":
+        model = None  # No model needed for copy baseline
+        step = "copy"
+        print("Running COPY baseline (delta=0, propagate current values)")
+    elif args.baseline == "linear":
+        # Create untrained linear baseline
+        C_static = len(stats["static_channels"])
+        in_channels = C_static + 3 + 3  # 14
+        model = LinearBaseline(in_channels=in_channels, grid_out_channels=3, scalar_out_dim=5)
+        model = model.to(device)
+        model.eval()
+        step = "linear"
+        print(f"Running LINEAR baseline (untrained, {sum(p.numel() for p in model.parameters()):,} params)")
+    else:
+        model, step = load_model_from_checkpoint(args.checkpoint, stats, device)
 
     if args.test_files is None:
         test_files = [f"v2.5_{i:04d}.h5" for i in range(1, 6)]
@@ -480,6 +502,7 @@ def main():
             test_files=test_files,
             max_steps=args.max_steps,
             save_path=args.save_path,
+            baseline=args.baseline,
         )
 
         elapsed_rollout = time.time() - start_rollout

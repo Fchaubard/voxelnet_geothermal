@@ -16,21 +16,25 @@ This model predicts temporal evolution of geothermal reservoir properties over 3
 
 Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 28-step autoregressive rollout:
 
-| Checkpoint | Kernel | Params | Time/file | ACC P | ACC T | ACC WEPT | MSE P | MSE T |
-|------------|--------|--------|-----------|-------|-------|----------|-------|-------|
-| best_r5_step53000.pt | 11x11x11 | 849K | 15s | **84.1%** | **86.7%** | **46.0%** | 20.5 | **35.8** |
-| best_r2_step24000.pt | 5x5x5 | 309K | 13s | 80.1% | 86.3% | 35.4% | **12.7** | 45.9 |
+| Model | Kernel | Params | Time/file | ACC P | ACC T | MSE P | MSE T |
+|-------|--------|--------|-----------|-------|-------|-------|-------|
+| **best_r2_step24000.pt** | 5x5x5 | 309K | 13s | 80.1% | 86.3% | **12.7** | 45.9 |
+| best_r5_step53000.pt | 11x11x11 | 849K | 15s | **84.1%** | **86.7%** | 20.5 | **35.8** |
+| Copy baseline | - | 0 | 0s | 46.3% | 83.9% | 121.1 | 139.1 |
+| Linear baseline | - | 120 | 0.4s | 40.4% | 62.8% | 114.1 | 166.8 |
 
 **Accuracy Thresholds (ACC_ABS):**
 - Pressure: +/- 5 bar
 - Temperature: +/- 5 C
-- WEPT: +/- 1e10 J
+
+**Baselines:**
+- **Copy baseline**: Predicts delta=0 (propagates initial values forward unchanged)
+- **Linear baseline**: Untrained 1x1x1 convolution (per-voxel linear regression)
 
 **Notes:**
 - Time/file measures model forward pass only (28 steps), excludes file I/O
-- r=5 model has best accuracy across all metrics
-- r=2 model has lowest pressure MSE but lower accuracy (smaller errors more often exceed threshold)
-- Both models achieve similar temperature accuracy (~86%)
+- r=2 model is recommended: smaller, faster, and lowest pressure MSE
+- Both trained models significantly outperform baselines on pressure prediction
 
 ### Per-Timestep Metrics
 
@@ -47,8 +51,8 @@ The plots below show accuracy and MSE metrics at each timestep during the 28-ste
 ## Pretrained Model Details
 
 Two pretrained checkpoints are included:
-- `best_r5_step53000.pt` - Larger model (11x11x11 kernel), best overall accuracy
-- `best_r2_step24000.pt` - Smaller model (5x5x5 kernel), lowest pressure MSE
+- `best_r2_step24000.pt` - **Recommended**: Smaller model (5x5x5 kernel), lowest pressure MSE
+- `best_r5_step53000.pt` - Larger model (11x11x11 kernel), higher accuracy but larger MSE
 
 Both were trained with similar configuration:
 
@@ -287,13 +291,15 @@ The `VoxelAutoRegressor` is a 3D CNN with:
 ```
 voxelnet_geothermal/
   checkpoints/
-    best_r5_step53000.pt     # Larger model, best overall accuracy
-    best_r2_step24000.pt     # Smaller model, lowest pressure MSE
+    best_r2_step24000.pt     # Recommended: smaller, lowest pressure MSE
+    best_r5_step53000.pt     # Larger model, higher accuracy
   data/
     stats.json               # Normalization statistics
   plots/
-    rollout_metrics_step53000.png  # Per-timestep metrics for r=5 model
     rollout_metrics_step24000.png  # Per-timestep metrics for r=2 model
+    rollout_metrics_step53000.png  # Per-timestep metrics for r=5 model
+    rollout_metrics_stepcopy.png   # Copy baseline metrics
+    rollout_metrics_steplinear.png # Linear baseline metrics
   sample_data/               # Download from Google Drive (see above)
     v2.5_0001.h5             # Sample validation files
     v2.5_0002.h5
