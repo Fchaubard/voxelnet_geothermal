@@ -25,6 +25,54 @@ Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 29-step auto
 - Temperature: +/- 5 C
 - WEPT: +/- 1e10 J
 
+## Pretrained Model Details
+
+The included checkpoint `best_r5_step53000.pt` was trained with the following configuration:
+
+### Architecture
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| **Receptive Field Radius** | 5 | Kernel size = 2*r+1 = 11x11x11 |
+| **Stride** | 1 | All convolutions use stride=1 |
+| **Padding** | 5 (same) | Output size = input size |
+| **Base Channels** | 32 | Feature width after stem |
+| **Depth** | 4 | Number of residual blocks in trunk |
+| **Grid Size** | 326 x 70 x 76 | (Depth x Height x Width) voxels |
+| **Input Channels** | 14 | 8 static + 3 from t-1 + 3 from t |
+| **Output Channels** | 3 | Delta P, Delta T, Delta WEPT |
+| **Total Parameters** | 849,000 | ~3.4 MB checkpoint |
+
+### Training Configuration
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| **Optimizer** | AdamW | Adam with decoupled weight decay |
+| **Learning Rate** | 0.001 | Constant after warmup |
+| **Weight Decay** | 0.01 | L2 regularization |
+| **Warmup Steps** | 10 | Linear LR warmup |
+| **LR Schedule** | Constant | No decay after warmup |
+| **Batch Size** | 4 per GPU | 36 effective (9 GPUs) |
+| **Gradient Accumulation** | 1-3 | Varied during training |
+| **Training Steps** | 53,000 | ~2 weeks of training |
+| **GPUs** | 9x NVIDIA A100/A40 | Distributed Data Parallel |
+
+### Key Design Choices
+| Feature | Value | Why |
+|---------|-------|-----|
+| **Prediction Type** | Residuals (deltas) | Smaller magnitudes, easier to learn, more stable rollouts |
+| **Lookback Context** | 2 timesteps | Uses both t-1 and t to predict t+1 |
+| **Scheduled Sampling** | Yes (80% final) | Model sees its own predictions during training for stable rollouts |
+| **Sched. Samp. Start** | 85% Acc5 | Begin mixing predictions when accuracy reaches 85% |
+| **Sched. Samp. End** | 95% Acc5 | Reach final probability at 95% accuracy |
+| **Loss Function** | MSE | Separate losses for P, T, WEPT |
+| **Normalization** | Z-score | Per-channel mean/std from training data |
+| **Mixed Precision** | No | Full FP32 training |
+
+### Data Split
+- **Training Set**: 444 simulations (v2.5_0006.h5 to v2.5_0449.h5)
+- **Test Set**: 5 simulations (v2.5_0001.h5 to v2.5_0005.h5)
+- **Time Steps per Simulation**: 30 (years)
+- **Samples per Epoch**: ~12,000 (444 files x ~28 valid timesteps)
+
 ## Data Format
 
 The model expects H5 files with the following structure:
