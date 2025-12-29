@@ -29,9 +29,10 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Large files (should use Git LFS or download separately)
+# Large files (download from Google Drive, see README)
 *.h5
 !data/stats.json
+sample_data/
 
 # Logs
 *.log

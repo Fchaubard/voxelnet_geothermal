@@ -53,7 +53,7 @@ Where D=326, H=70, W=76 for v2.5 data, and T=30 time steps.
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/voxelnet_geothermal.git
+git clone https://github.com/Fchaubard/voxelnet_geothermal.git
 cd voxelnet_geothermal
 
 # Create virtual environment
@@ -65,16 +65,39 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
 
+## Download Data
+
+Download the sample H5 files from Google Drive:
+
+**[Download Data (Google Drive)](https://drive.google.com/drive/folders/1CqXxoEauRxgvNbHOnKDVaLhkRWTlsXsg)**
+
+Place the downloaded `.h5` files in the `sample_data/` directory:
+
+```bash
+mkdir -p sample_data
+# Move downloaded files to sample_data/
+mv ~/Downloads/v2.5_*.h5 sample_data/
+```
+
+Your directory should look like:
+```
+voxelnet_geothermal/
+  sample_data/
+    v2.5_0001.h5
+    v2.5_0002.h5
+    ...
+```
+
 ## Quick Start: Running Inference
 
-Evaluate the pretrained checkpoint on test files:
+Run inference on the downloaded sample files:
 
 ```bash
 python scripts/rollout.py \
     --checkpoint checkpoints/best_r5_step53000.pt \
     --stats_path data/stats.json \
-    --raw_h5_dir /path/to/h5_data \
-    --test_files v2.5_0001.h5 v2.5_0002.h5 \
+    --raw_h5_dir sample_data \
+    --test_files v2.5_0001.h5 \
     --max_steps 29 \
     --device cuda:0
 ```
@@ -195,6 +218,10 @@ voxelnet_geothermal/
     best_r5_step53000.pt     # Pretrained checkpoint (r=5, 53K steps)
   data/
     stats.json               # Normalization statistics
+  sample_data/               # Download from Google Drive (see above)
+    v2.5_0001.h5             # Sample validation files
+    v2.5_0002.h5
+    ...
   notebooks/
     analyze_h5_v2.5_fixed.ipynb    # Data exploration notebook
     model_error_analysis.ipynb      # Error analysis notebook
@@ -249,6 +276,6 @@ If you use this code, please cite:
 @software{voxelnet_geothermal,
   title = {VoxelNet Geothermal: 3D CNN for Reservoir Simulation},
   year = {2024},
-  url = {https://github.com/YOUR_USERNAME/voxelnet_geothermal}
+  url = {https://github.com/Fchaubard/voxelnet_geothermal}
 }
 ```
