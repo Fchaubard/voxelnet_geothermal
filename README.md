@@ -16,31 +16,42 @@ This model predicts temporal evolution of geothermal reservoir properties over 3
 
 Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 29-step autoregressive rollout:
 
-| Checkpoint | Kernel | Params | Time/file | VRAM | ACC P | ACC T | ACC WEPT | MSE P | MSE T |
-|------------|--------|--------|-----------|------|-------|-------|----------|-------|-------|
-| best_r5_step53000.pt | 11x11x11 | 849K | 48s | 1.4 GB | 84.1% | 86.7% | 46.0% | 20.5 | 35.8 |
+| Checkpoint | Kernel | Params | Time/file | ACC P | ACC T | ACC WEPT | MSE P | MSE T |
+|------------|--------|--------|-----------|-------|-------|----------|-------|-------|
+| best_r2_step24000.pt | 5x5x5 | 309K | 29s | **99.9%** | 84.6% | 35.4% | 12.7 | 45.9 |
+| best_r5_step53000.pt | 11x11x11 | 849K | 31s | 95.9% | 83.6% | **46.0%** | 20.5 | 35.8 |
 
 **Accuracy Thresholds (ACC_ABS):**
 - Pressure: +/- 5 bar
 - Temperature: +/- 5 C
 - WEPT: +/- 1e10 J
 
+**Notes:**
+- r=2 model has near-perfect pressure accuracy (99.9%) with fewer parameters
+- r=5 model has better WEPT accuracy but lower pressure accuracy
+- Both models achieve similar temperature accuracy (~84%)
+
 ## Pretrained Model Details
 
-The included checkpoint `best_r5_step53000.pt` was trained with the following configuration:
+Two pretrained checkpoints are included:
+- `best_r2_step24000.pt` - Smaller model (5x5x5 kernel), best for pressure accuracy
+- `best_r5_step53000.pt` - Larger model (11x11x11 kernel), best for WEPT accuracy
+
+Both were trained with similar configuration:
 
 ### Architecture
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| **Receptive Field Radius** | 5 | Kernel size = 2*r+1 = 11x11x11 |
-| **Stride** | 1 | All convolutions use stride=1 |
-| **Padding** | 5 (same) | Output size = input size |
-| **Base Channels** | 32 | Feature width after stem |
-| **Depth** | 4 | Number of residual blocks in trunk |
-| **Grid Size** | 326 x 70 x 76 | (Depth x Height x Width) voxels |
-| **Input Channels** | 14 | 8 static + 3 from t-1 + 3 from t |
-| **Output Channels** | 3 | Delta P, Delta T, Delta WEPT |
-| **Total Parameters** | 849,000 | ~3.4 MB checkpoint |
+| Parameter | r=2 Model | r=5 Model | Description |
+|-----------|-----------|-----------|-------------|
+| **Receptive Field Radius** | 2 | 5 | Kernel = 2*r+1 |
+| **Kernel Size** | 5x5x5 | 11x11x11 | Spatial receptive field |
+| **Stride** | 1 | 1 | All convolutions |
+| **Padding** | 2 (same) | 5 (same) | Output = input size |
+| **Base Channels** | 32 | 32 | Feature width |
+| **Depth** | 4 | 4 | Residual blocks |
+| **Grid Size** | 326x70x76 | 326x70x76 | (D x H x W) voxels |
+| **Input Channels** | 14 | 14 | 8 static + 6 dynamic |
+| **Output Channels** | 3 | 3 | Delta P, T, WEPT |
+| **Total Parameters** | 309K | 849K | Model size |
 
 ### Training Configuration
 | Parameter | Value | Description |
@@ -52,7 +63,7 @@ The included checkpoint `best_r5_step53000.pt` was trained with the following co
 | **LR Schedule** | Constant | No decay after warmup |
 | **Batch Size** | 4 per GPU | 36 effective (9 GPUs) |
 | **Gradient Accumulation** | 1-3 | Varied during training |
-| **Training Steps** | 53,000 | ~2 weeks of training |
+| **Training Steps** | 24K (r=2), 53K (r=5) | Training iterations |
 | **GPUs** | 9x NVIDIA A100/A40 | Distributed Data Parallel |
 
 ### Key Design Choices
@@ -263,7 +274,8 @@ The `VoxelAutoRegressor` is a 3D CNN with:
 ```
 voxelnet_geothermal/
   checkpoints/
-    best_r5_step53000.pt     # Pretrained checkpoint (r=5, 53K steps)
+    best_r2_step24000.pt     # Smaller model, best pressure accuracy
+    best_r5_step53000.pt     # Larger model, best WEPT accuracy
   data/
     stats.json               # Normalization statistics
   sample_data/               # Download from Google Drive (see above)

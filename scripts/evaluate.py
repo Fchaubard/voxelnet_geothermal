@@ -55,9 +55,14 @@ def load_model_from_checkpoint(checkpoint_path, stats, device):
         depth = 4
         r = 2
 
+        # Try to infer from state dict
         for key in state_dict.keys():
-            if "conv1.weight" in key and "stem" in key:
+            if "stem.0.weight" in key:
+                # stem.0.weight has shape [base_channels, in_channels, k, k, k]
+                # where k = 2*r + 1, so r = (k - 1) / 2
                 base_channels = state_dict[key].shape[0]
+                k = state_dict[key].shape[2]  # kernel size
+                r = (k - 1) // 2
                 break
 
         model = VoxelAutoRegressor(
@@ -71,7 +76,7 @@ def load_model_from_checkpoint(checkpoint_path, stats, device):
             scalar_out_dim=5,
             use_checkpoint=False,
         )
-        print(f"Created VoxelAutoRegressor model with base_channels={base_channels}")
+        print(f"Created VoxelAutoRegressor model with base_channels={base_channels}, r={r} (kernel {2*r+1}x{2*r+1}x{2*r+1})")
 
     model.load_state_dict(state_dict)
     model = model.to(device)
