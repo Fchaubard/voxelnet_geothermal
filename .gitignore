@@ -1,0 +1,45 @@
+# Garbage folder (old checkpoints, logs, etc)
+garbage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large files (should use Git LFS or download separately)
+*.h5
+!data/stats.json
+
+# Logs
+*.log
+wandb/
+logs/
+outputs/
+
+# Temporary
+*.tmp
+*.temp
+untitled*.txt

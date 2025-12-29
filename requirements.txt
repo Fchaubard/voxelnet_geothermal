@@ -1,0 +1,14 @@
+# Core dependencies
+numpy>=1.24
+h5py>=3.8
+tqdm>=4.65
+
+# Optional: Weights & Biases logging
+wandb>=0.16
+
+# PyTorch: Install separately based on your CUDA version
+# Example for CUDA 12.1:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# For CPU-only:
+#   pip install torch torchvision torchaudio
+# See: https://pytorch.org/get-started/locally/

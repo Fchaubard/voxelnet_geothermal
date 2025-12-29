@@ -1,0 +1,141 @@
+{
+  "mean": {
+    "static_input_absolute": [
+      7.973182506161688,
+      -17.528693449032005,
+      0.15276246598093765,
+      1.0,
+      39.902557134830836,
+      39.902557134830836,
+      9.487478352801372,
+      0.053374346791451734
+    ],
+    "grid_input_absolute": [
+      211.2015301249723,
+      88.7633704862409,
+      447751143147.6996
+    ],
+    "grid_output_delta": [
+      0.7084711158318944,
+      -0.23109142410712055,
+      -5337115161.707406
+    ],
+    "scalar_output_absolute": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "static": [
+      7.973182506161688,
+      -17.528693449032005,
+      0.15276246598093765,
+      1.0,
+      39.902557134830836,
+      39.902557134830836,
+      9.487478352801372,
+      0.053374346791451734
+    ],
+    "grid": [
+      0.7084711158318944,
+      -0.23109142410712055,
+      -5337115161.707406
+    ],
+    "scalar": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "std": {
+    "static_input_absolute": [
+      3.0555300771091645,
+      7999.980796533527,
+      0.3597583841530933,
+      0.0,
+      125.81124819642123,
+      125.81124819642123,
+      36.31591334553995,
+      0.037891428086670766
+    ],
+    "grid_input_absolute": [
+      140.44856173093615,
+      13.945627098170982,
+      536006668541.3783
+    ],
+    "grid_output_delta": [
+      0.75041524778994,
+      0.7271767247507408,
+      14121377420.921614
+    ],
+    "scalar_output_absolute": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "static": [
+      3.0555300771091645,
+      7999.980796533527,
+      0.3597583841530933,
+      0.0,
+      125.81124819642123,
+      125.81124819642123,
+      36.31591334553995,
+      0.037891428086670766
+    ],
+    "grid": [
+      0.75041524778994,
+      0.7271767247507408,
+      14121377420.921614
+    ],
+    "scalar": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "static_channels": [
+    "FaultId",
+    "InjRate",
+    "IsActive",
+    "IsWell",
+    "PermX",
+    "PermY",
+    "PermZ",
+    "Porosity"
+  ],
+  "grid_channels": [
+    "Pressure",
+    "Temperature",
+    "WEPT"
+  ],
+  "scalar_output_keys": [
+    "FieldEnergyInjectionRate",
+    "FieldEnergyProductionRate",
+    "FieldEnergyProductionTotal",
+    "FieldWaterInjectionRate",
+    "FieldWaterProductionRate"
+  ],
+  "log1p_flags": {
+    "scalar": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "grid_input_stats_computed_on": "absolute_values",
+  "grid_output_stats_computed_on": "temporal_deltas",
+  "static_stats_computed_on": "absolute_values",
+  "scalar_stats_computed_on": "absolute_values_no_log1p",
+  "data_format": "v2.5",
+  "num_files_used": 358
+}
