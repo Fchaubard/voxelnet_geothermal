@@ -125,6 +125,7 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
     timestep_acc5_p = [[] for _ in range(max_steps)]
     timestep_acc5_t = [[] for _ in range(max_steps)]
     timestep_acc5_w = [[] for _ in range(max_steps)]
+    actual_max_step = 0  # Track the actual max timestep with data
 
     # Per-file accumulators for summary (matches train_ddp.py)
     all_mse_p, all_mse_t, all_mse_w = [], [], []
@@ -295,6 +296,7 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
                     timestep_acc5_p[step].append(acc5_p * 100.0)  # Store as percentage
                     timestep_acc5_t[step].append(acc5_t * 100.0)
                     timestep_acc5_w[step].append(acc5_w * 100.0)
+                    actual_max_step = max(actual_max_step, step + 1)  # Track actual valid steps
 
                     # Store per-file metrics (for summary - matches train_ddp.py)
                     file_mse_p.append(mse_p)
@@ -326,12 +328,13 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
                 }
 
     # Average per-timestep metrics across files (for per-timestep plotting)
+    # Only include timesteps that actually have data
     per_timestep = {
         "P_MSE": [], "T_MSE": [], "W_MSE": [],
         "P_Acc5": [], "T_Acc5": [], "W_Acc5": [],
     }
 
-    for step in range(max_steps):
+    for step in range(actual_max_step):
         per_timestep["P_MSE"].append(np.mean(timestep_mse_p[step]) if timestep_mse_p[step] else 0.0)
         per_timestep["T_MSE"].append(np.mean(timestep_mse_t[step]) if timestep_mse_t[step] else 0.0)
         per_timestep["W_MSE"].append(np.mean(timestep_mse_w[step]) if timestep_mse_w[step] else 0.0)
@@ -349,6 +352,7 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
         "acc5_w": np.mean(all_acc5_w) if all_acc5_w else 0.0,
         "files_evaluated": files_processed,
         "model_time": model_time,  # Total forward pass time only (no file I/O)
+        "actual_steps": actual_max_step,  # Actual number of valid timesteps
     }
 
     # Save predictions to H5 if save_path provided
@@ -368,20 +372,22 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
     return per_timestep, summary
 
 
-def plot_per_timestep_metrics(per_timestep, max_steps, save_path, step):
+def plot_per_timestep_metrics(per_timestep, save_path, step):
     """Generate and save per-timestep metrics figure."""
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    t = list(range(1, max_steps + 1))
+    # Use actual data length (excludes timesteps with no data)
+    num_steps = len(per_timestep["P_Acc5"])
+    t = list(range(1, num_steps + 1))
 
-    P_Acc5 = per_timestep["P_Acc5"][:max_steps]
-    T_Acc5 = per_timestep["T_Acc5"][:max_steps]
-    W_Acc5 = per_timestep["W_Acc5"][:max_steps]
-    P_MSE = per_timestep["P_MSE"][:max_steps]
-    T_MSE = per_timestep["T_MSE"][:max_steps]
-    W_MSE = per_timestep["W_MSE"][:max_steps]
+    P_Acc5 = per_timestep["P_Acc5"]
+    T_Acc5 = per_timestep["T_Acc5"]
+    W_Acc5 = per_timestep["W_Acc5"]
+    P_MSE = per_timestep["P_MSE"]
+    T_MSE = per_timestep["T_MSE"]
+    W_MSE = per_timestep["W_MSE"]
 
     fig, ax1 = plt.subplots(figsize=(10, 6))
 
@@ -486,8 +492,9 @@ def main():
         print(f"  Model forward pass time: {model_time:.2f}s ({model_time/len(test_files):.2f}s per file)")
         print(f"  Total wallclock time: {elapsed_rollout:.2f}s (includes file I/O)")
         print(f"  Files evaluated: {summary['files_evaluated']}")
-        print(f"\n  [ROLLOUT {args.max_steps}-step] MSE - P:{summary['mse_p']:.6e} T:{summary['mse_t']:.6e} WEPT:{summary['mse_w']:.6e}")
-        print(f"  [ROLLOUT {args.max_steps}-step] ACC_ABS - P:{summary['acc5_p']:.4f} T:{summary['acc5_t']:.4f} WEPT:{summary['acc5_w']:.4f}")
+        actual_steps = summary['actual_steps']
+        print(f"\n  [ROLLOUT {actual_steps}-step] MSE - P:{summary['mse_p']:.6e} T:{summary['mse_t']:.6e} WEPT:{summary['mse_w']:.6e}")
+        print(f"  [ROLLOUT {actual_steps}-step] ACC_ABS - P:{summary['acc5_p']:.4f} T:{summary['acc5_t']:.4f} WEPT:{summary['acc5_w']:.4f}")
         print(f"  (ACC_ABS thresholds: P +/-5 bar, T +/-5 C, WEPT +/-1e10 J)")
 
         # Print per-timestep table
@@ -496,15 +503,16 @@ def main():
         print(f"{'='*70}")
         print(f"{'t':>3}  {'P_Acc5':>8}  {'P_MSE':>12}  {'T_Acc5':>8}  {'T_MSE':>12}  {'W_Acc5':>8}  {'W_MSE':>12}")
         print("-" * 70)
-        for i in range(min(args.max_steps, len(per_timestep["P_MSE"]))):
+        for i in range(len(per_timestep["P_MSE"])):
             print(f"{i+1:3d}  {per_timestep['P_Acc5'][i]:7.2f}%  {per_timestep['P_MSE'][i]:12.6f}  "
                   f"{per_timestep['T_Acc5'][i]:7.2f}%  {per_timestep['T_MSE'][i]:12.6f}  "
                   f"{per_timestep['W_Acc5'][i]:7.2f}%  {per_timestep['W_MSE'][i]:12.6e}")
         print(f"{'='*70}")
 
         # Save figure
-        fig_path = os.path.join(args.output_dir, f"rollout_metrics_step{step}.png")
-        plot_per_timestep_metrics(per_timestep, args.max_steps, fig_path, step)
+        fig_path = os.path.join(args.output_dir, f"plots/rollout_metrics_step{step}.png")
+        os.makedirs(os.path.dirname(fig_path), exist_ok=True)
+        plot_per_timestep_metrics(per_timestep, fig_path, step)
 
     print("\nDone!")
 

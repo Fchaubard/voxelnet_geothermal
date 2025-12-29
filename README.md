@@ -14,7 +14,7 @@ This model predicts temporal evolution of geothermal reservoir properties over 3
 
 ## Model Performance
 
-Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 29-step autoregressive rollout:
+Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 28-step autoregressive rollout:
 
 | Checkpoint | Kernel | Params | Time/file | ACC P | ACC T | ACC WEPT | MSE P | MSE T |
 |------------|--------|--------|-----------|-------|-------|----------|-------|-------|
@@ -27,10 +27,22 @@ Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 29-step auto
 - WEPT: +/- 1e10 J
 
 **Notes:**
-- Time/file measures model forward pass only (29 steps), excludes file I/O
+- Time/file measures model forward pass only (28 steps), excludes file I/O
 - r=5 model has best accuracy across all metrics
 - r=2 model has lowest pressure MSE but lower accuracy (smaller errors more often exceed threshold)
 - Both models achieve similar temperature accuracy (~86%)
+
+### Per-Timestep Metrics
+
+The plots below show accuracy and MSE metrics at each timestep during the 28-step autoregressive rollout. Accuracy (solid lines, left axis) shows the percentage of predictions within the absolute threshold. MSE (dashed lines, right axis) shows mean squared error.
+
+**r=5 Model (best_r5_step53000.pt):**
+
+![Per-timestep metrics for r=5 model](plots/rollout_metrics_step53000.png)
+
+**r=2 Model (best_r2_step24000.pt):**
+
+![Per-timestep metrics for r=2 model](plots/rollout_metrics_step24000.png)
 
 ## Pretrained Model Details
 
@@ -275,10 +287,13 @@ The `VoxelAutoRegressor` is a 3D CNN with:
 ```
 voxelnet_geothermal/
   checkpoints/
-    best_r2_step24000.pt     # Smaller model, best pressure accuracy
-    best_r5_step53000.pt     # Larger model, best WEPT accuracy
+    best_r5_step53000.pt     # Larger model, best overall accuracy
+    best_r2_step24000.pt     # Smaller model, lowest pressure MSE
   data/
     stats.json               # Normalization statistics
+  plots/
+    rollout_metrics_step53000.png  # Per-timestep metrics for r=5 model
+    rollout_metrics_step24000.png  # Per-timestep metrics for r=2 model
   sample_data/               # Download from Google Drive (see above)
     v2.5_0001.h5             # Sample validation files
     v2.5_0002.h5
