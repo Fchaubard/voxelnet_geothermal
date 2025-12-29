@@ -135,6 +135,7 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
 
     base_model = model.module if hasattr(model, 'module') else model
     files_processed = 0
+    model_time = 0.0  # Accumulate only forward pass time (not file I/O)
 
     with torch.no_grad():
         for fname in test_files:
@@ -218,8 +219,11 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
                 x_input[0, 13][~mask_w] = 0
 
                 # Forward pass - model outputs NORMALIZED RESIDUALS
+                t0 = time.time()
                 with torch.cuda.amp.autocast(enabled=True):
                     grid_pred_norm, _ = base_model(x_input, params_t)
+                torch.cuda.synchronize()  # Ensure GPU computation is complete
+                model_time += time.time() - t0
 
                 # Guard against NaN/inf
                 grid_pred_norm = torch.nan_to_num(grid_pred_norm, nan=0.0, posinf=10.0, neginf=-10.0)
@@ -271,18 +275,18 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
                     if mse_p is None or mse_t is None or mse_w is None:
                         continue
 
-                    # Acc5 on ABSOLUTE values
-                    def acc5(pred, true, mask, eps=1e-8):
+                    # ACC_ABS with ABSOLUTE thresholds (not relative)
+                    # Pressure: +/- 5 bar, Temperature: +/- 5 C, WEPT: +/- 1e10 J
+                    def acc_abs(pred, true, mask, threshold):
                         pm, tm = pred[mask], true[mask]
                         if len(pm) == 0:
                             return 0.0
-                        rel_err = (pm - tm).abs() / tm.abs().clamp(min=eps)
-                        return (rel_err <= 0.05).float().mean().item()  # 0-1 range
+                        abs_err = (pm - tm).abs()
+                        return (abs_err <= threshold).float().mean().item()
 
-                    mask_p_nonzero = mask_p & (gt_p.abs() >= 1.0)
-                    acc5_p = acc5(curr_p, gt_p, mask_p_nonzero)
-                    acc5_t = acc5(curr_t, gt_t, mask_t)
-                    acc5_w = acc5(curr_w, gt_w, mask_w)
+                    acc5_p = acc_abs(curr_p, gt_p, mask_p, 5.0)      # +/- 5 bar
+                    acc5_t = acc_abs(curr_t, gt_t, mask_t, 5.0)      # +/- 5 C
+                    acc5_w = acc_abs(curr_w, gt_w, mask_w, 1e10)     # +/- 1e10 J
 
                     # Store per-timestep metrics (for per-timestep reporting)
                     timestep_mse_p[step].append(mse_p)
@@ -344,6 +348,7 @@ def evaluate_rollout_per_timestep(model, raw_h5_dir, stats, device, test_files, 
         "acc5_t": np.mean(all_acc5_t) if all_acc5_t else 0.0,
         "acc5_w": np.mean(all_acc5_w) if all_acc5_w else 0.0,
         "files_evaluated": files_processed,
+        "model_time": model_time,  # Total forward pass time only (no file I/O)
     }
 
     # Save predictions to H5 if save_path provided
@@ -477,10 +482,13 @@ def main():
         print(f"\n{'='*70}")
         print(f"ROLLOUT EVALUATION RESULTS (step {step})")
         print(f"{'='*70}")
-        print(f"  Wallclock time: {elapsed_rollout:.2f}s ({elapsed_rollout/len(test_files):.2f}s per file)")
+        model_time = summary['model_time']
+        print(f"  Model forward pass time: {model_time:.2f}s ({model_time/len(test_files):.2f}s per file)")
+        print(f"  Total wallclock time: {elapsed_rollout:.2f}s (includes file I/O)")
         print(f"  Files evaluated: {summary['files_evaluated']}")
         print(f"\n  [ROLLOUT {args.max_steps}-step] MSE - P:{summary['mse_p']:.6e} T:{summary['mse_t']:.6e} WEPT:{summary['mse_w']:.6e}")
-        print(f"  [ROLLOUT {args.max_steps}-step] ACC5 - P:{summary['acc5_p']:.4f} T:{summary['acc5_t']:.4f} WEPT:{summary['acc5_w']:.4f}")
+        print(f"  [ROLLOUT {args.max_steps}-step] ACC_ABS - P:{summary['acc5_p']:.4f} T:{summary['acc5_t']:.4f} WEPT:{summary['acc5_w']:.4f}")
+        print(f"  (ACC_ABS thresholds: P +/-5 bar, T +/-5 C, WEPT +/-1e10 J)")
 
         # Print per-timestep table
         print(f"\n{'='*70}")

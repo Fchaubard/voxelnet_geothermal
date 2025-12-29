@@ -18,8 +18,8 @@ Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 29-step auto
 
 | Checkpoint | Kernel | Params | Time/file | ACC P | ACC T | ACC WEPT | MSE P | MSE T |
 |------------|--------|--------|-----------|-------|-------|----------|-------|-------|
-| best_r2_step24000.pt | 5x5x5 | 309K | 29s | **99.9%** | 84.6% | 35.4% | 12.7 | 45.9 |
-| best_r5_step53000.pt | 11x11x11 | 849K | 31s | 95.9% | 83.6% | **46.0%** | 20.5 | 35.8 |
+| best_r5_step53000.pt | 11x11x11 | 849K | 15s | **84.1%** | **86.7%** | **46.0%** | 20.5 | **35.8** |
+| best_r2_step24000.pt | 5x5x5 | 309K | 13s | 80.1% | 86.3% | 35.4% | **12.7** | 45.9 |
 
 **Accuracy Thresholds (ACC_ABS):**
 - Pressure: +/- 5 bar
@@ -27,15 +27,16 @@ Evaluation on 5 held-out test files (v2.5_0001.h5 to v2.5_0005.h5), 29-step auto
 - WEPT: +/- 1e10 J
 
 **Notes:**
-- r=2 model has near-perfect pressure accuracy (99.9%) with fewer parameters
-- r=5 model has better WEPT accuracy but lower pressure accuracy
-- Both models achieve similar temperature accuracy (~84%)
+- Time/file measures model forward pass only (29 steps), excludes file I/O
+- r=5 model has best accuracy across all metrics
+- r=2 model has lowest pressure MSE but lower accuracy (smaller errors more often exceed threshold)
+- Both models achieve similar temperature accuracy (~86%)
 
 ## Pretrained Model Details
 
 Two pretrained checkpoints are included:
-- `best_r2_step24000.pt` - Smaller model (5x5x5 kernel), best for pressure accuracy
-- `best_r5_step53000.pt` - Larger model (11x11x11 kernel), best for WEPT accuracy
+- `best_r5_step53000.pt` - Larger model (11x11x11 kernel), best overall accuracy
+- `best_r2_step24000.pt` - Smaller model (5x5x5 kernel), lowest pressure MSE
 
 Both were trained with similar configuration:
 
