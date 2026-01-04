@@ -305,6 +305,7 @@ voxelnet_geothermal/
     v2.5_0002.h5
     ...
   notebooks/
+    demo.ipynb                       # Quick-start demo notebook
     analyze_h5_v2.5_fixed.ipynb    # Data exploration notebook
     model_error_analysis.ipynb      # Error analysis notebook
   scripts/
@@ -326,6 +327,7 @@ voxelnet_geothermal/
 
 ## Notebooks
 
+- **demo.ipynb**: Quick-start demo showing how to load the model, run inference, and visualize results
 - **analyze_h5_v2.5_fixed.ipynb**: Explore the H5 data format, visualize static and dynamic features, understand data distributions
 - **model_error_analysis.ipynb**: Analyze model predictions vs ground truth, visualize errors per time step, identify failure modes
 

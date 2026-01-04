@@ -112,9 +112,9 @@ def main():
                         help="Path to model checkpoint (.pt file)")
 
     # Data arguments
-    parser.add_argument("--raw_h5_dir", type=str, default="/workspace/all_oak_data/h5s_v2.5_data",
+    parser.add_argument("--raw_h5_dir", type=str, default="sample_data",
                         help="Directory with raw v2.5_*.h5 files")
-    parser.add_argument("--stats_path", type=str, default="/workspace/omv_v2.5/stats.json",
+    parser.add_argument("--stats_path", type=str, default="data/stats.json",
                         help="Path to stats.json for normalization")
     parser.add_argument("--test_files", type=str, nargs="+", default=None,
                         help="List of test files (default: v2.5_0001.h5 to v2.5_0005.h5)")
@@ -122,8 +122,8 @@ def main():
     # Evaluation arguments
     parser.add_argument("--max_steps", type=int, default=29,
                         help="Maximum rollout steps (default: 29 for 30-step prediction)")
-    parser.add_argument("--device", type=str, default="cuda:9",
-                        help="Device to run on (default: cuda:9 - reserved for inference)")
+    parser.add_argument("--device", type=str, default="cuda:0",
+                        help="Device to run on (default: cuda:0)")
 
     args = parser.parse_args()
 
